@@ -193,8 +193,11 @@ def ReadTableLoadRefinedGrid (my_tau, my_alb, nRefine, points_list):
     # Compute the DoLPs at the requested points too
     DoLPs = 100 * np.sqrt(Qlist*Qlist + Ulist*Ulist) / Ilist
     
+    # Compute the AoLPs at the requested points too
+    AoLPs = np.rad2deg( 0.5*np.arctan2(Ulist, Qlist) )
+    
     # Return the interpolated values of I/Q/U/DoLP at the list of points
-    return Ilist, Qlist, Ulist, DoLPs
+    return Ilist, Qlist, Ulist, DoLPs, AoLPs
 #######################################################################
 
 
@@ -305,7 +308,8 @@ def find_dolp (az0, el0, az, el, tau, albedo, npts):
     pt_list = np.array([mu0, mu, rel_az])
     
     # Get the I/Q/U/DoLP value at the location in pt_list
-    I, Q, U, DoLP = ReadTableLoadRefinedGrid (tau, albedo, npts, pt_list)
+    I, Q, U, DoLP, AoLP = ReadTableLoadRefinedGrid (tau, albedo, \
+            npts, pt_list)
 
     return DoLP[0]
 
@@ -356,8 +360,8 @@ def make_skymap_dolp (el, az, tau, albedo, npts, opfilename="None"):
 
 
     # Get the list of I/Q/U values at the locations on the list
-    Ivals, Qvals, Uvals, DoLPvals = ReadTableLoadRefinedGrid (tau, 
-                                            albedo, npts, pts_list)
+    Ivals, Qvals, Uvals, DoLPvals, AoLPvals = ReadTableLoadRefinedGrid (\
+            tau, albedo, npts, pts_list)
 
     # Turn the DoLP values into 2D arrays for visualizations
     DoLP = DoLPvals.reshape(npts, npts)
@@ -378,11 +382,11 @@ def make_skymap_dolp (el, az, tau, albedo, npts, opfilename="None"):
 #######################################################################
 # Visualizations
 
-# Detailed plots of I, Q, U, DoLP skymap etc
-def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
-                         opfiletype, opdpi):
+# Detailed plots of I, Q, U, and DoLP, AoLP skymaps
+def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, 
+        DoLP, AoLP, opfiletype, opdpi):
     '''
-    Produces a detailed visualization showing I/Q/U/DoLP etc.
+    Produces a detailed visualization showing I/Q/U/DoLP/AoLP
     
     Parameters
     ----------
@@ -396,7 +400,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
         
     muArr : viewing direction zenith-distance grid points
         
-    I/Q/U/DoLP: 2D arrays with I/Q/U/DoLP values
+    I/Q/U/DoLP/AoLP: 2D arrays with I/Q/U/DoLP/AoLP values
     
     opfiletype : output file type (png/pdf/jpg)
     
@@ -485,6 +489,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
                 rotation_mode='anchor')
     ax.grid()
 
+    '''
     ax = axs[1, 1]
     c = ax.pcolor(X, Y, DoLP)
     ax.plot([0],[mu0], 'ro', markersize=10)
@@ -493,13 +498,14 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
     ax.set_xlabel(r'$\phi$')
     ax.set_ylabel(r'$\mu$')
     fig.colorbar(c, ax=ax)
+    '''
 
-    # The final plot will show distribution of DoLP on the
+    # This plot will show distribution of DoLPs on the
     # sky, using a polar plot. So we first remove the linear
-    # matplotlib axis at row=2, col=3, and instead add
+    # matplotlib axis at row=2, col=2, and instead add
     # a new axis there with polar projection
-    axs[1,2].remove()
-    ax = fig.add_subplot(2, 3, 6, projection='polar')
+    axs[1,1].remove()
+    ax = fig.add_subplot(2, 3, 5, projection='polar')
     ax.grid(False)
     azm = np.deg2rad(phiArr)
     rad = np.rad2deg( np.arccos(muArr) )
@@ -509,6 +515,23 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U, DoLP,
     ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
     ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
     ax.grid()
+
+    # This plot will show distribution of AoLPs on the
+    # sky, using a polar plot. So we first remove the linear
+    # matplotlib axis at row=2, col=3, and instead add
+    # a new axis there with polar projection
+    axs[1,2].remove()
+    ax = fig.add_subplot(2, 3, 6, projection='polar')
+    ax.grid(False)
+    azm = np.deg2rad(phiArr)
+    rad = np.rad2deg( np.arccos(muArr) )
+    th, r = np.meshgrid(azm, rad)
+    ax.pcolormesh(th, r, AoLP)
+    ax.pcolormesh(-th, r, AoLP)
+    ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
+    ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
+    ax.grid()
+
 
     fig.tight_layout(pad=1.0)
     plt.savefig(op, dpi=opdpi)

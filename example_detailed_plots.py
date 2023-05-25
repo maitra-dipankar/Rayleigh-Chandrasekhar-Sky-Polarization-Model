@@ -11,7 +11,8 @@ my_tau = 0.1
 my_alb = 0.25
 
 # Input mu0 (my_mu0) has to be within 0.1 <= my_mu0 <= 1 
-my_mu0 = np.cos (np.deg2rad(46))
+my_mu0 = np.cos (np.deg2rad(65))
+#my_mu0 = 0.1
 
 # Regrid the mu and phi grids so that each have nNew grid points
 nNew = 499
@@ -26,19 +27,20 @@ pts_list = np.reshape(pts_grid, (3, -1), order='C').T
 
 
 # Get the list of I/Q/U values at the locations on the list
-Ivals, Qvals, Uvals, DoLPvals = nt.ReadTableLoadRefinedGrid (my_tau, my_alb, 
-                                                          nNew, pts_list)
+Ivals, Qvals, Uvals, DoLPvals, AoLPvals = nt.ReadTableLoadRefinedGrid (\
+        my_tau, my_alb, nNew, pts_list)
 
 # Turn the I/Q/U/DoLP values into 2D arrays for visualizations
 I = Ivals.reshape(nNew, nNew)
 Q = Qvals.reshape(nNew, nNew)
 U = Uvals.reshape(nNew, nNew)
 DoLP = DoLPvals.reshape(nNew, nNew)
+AoLP = AoLPvals.reshape(nNew, nNew)
 
 
 # Visualize results
 my_filetype = "png"
 my_dpi = 150
 nt.make_detailed_plots(my_tau, my_alb, my_mu0, phiNew, muNew, I, Q, U,
-                    DoLP, my_filetype, my_dpi)
+                    DoLP, AoLP, my_filetype, my_dpi)
 
