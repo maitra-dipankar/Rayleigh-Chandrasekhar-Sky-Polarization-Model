@@ -14,7 +14,9 @@ The observing direction can have zenith distance range of [88.85:0] degrees.
 
 #######################################################################
 # Stuff to import
+import cmocean
 import numpy as np
+from copy import copy
 import matplotlib.pyplot as plt
 from scipy.interpolate import interp2d
 from scipy.interpolate import RegularGridInterpolator as rgi
@@ -489,17 +491,6 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
                 rotation_mode='anchor')
     ax.grid()
 
-    '''
-    ax = axs[1, 1]
-    c = ax.pcolor(X, Y, DoLP)
-    ax.plot([0],[mu0], 'ro', markersize=10)
-    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
-    ax.set_title('DoLP')
-    ax.set_xlabel(r'$\phi$')
-    ax.set_ylabel(r'$\mu$')
-    fig.colorbar(c, ax=ax)
-    '''
-
     # This plot will show distribution of DoLPs on the
     # sky, using a polar plot. So we first remove the linear
     # matplotlib axis at row=2, col=2, and instead add
@@ -511,10 +502,26 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
     rad = np.rad2deg( np.arccos(muArr) )
     th, r = np.meshgrid(azm, rad)
     ax.pcolormesh(th, r, DoLP)
-    ax.pcolormesh(-th, r, DoLP)
+    pc = ax.pcolormesh(-th, r, DoLP)
+    cbar = fig.colorbar(pc, pad=0.1)
+    cbar.set_label('DoLP (%)')
     ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
     ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
     ax.grid()
+
+    ###############
+    # Arrays needed to create the half-circular colorbar for AoLP maps
+
+    # Radial grid
+    rmin, rmax, rpts = 0.5, 1.0, 100
+    radii = np.linspace(rmin, rmax, rpts)
+
+    # theta values on the right side of the color circle
+    thpts = 500 
+    azimuthsR = np.linspace(-90, 91, thpts)
+    valuesR =  azimuthsR * np.ones((rpts, thpts))
+    ###############
+
 
     # This plot will show distribution of AoLPs on the
     # sky, using a polar plot. So we first remove the linear
@@ -522,16 +529,39 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
     # a new axis there with polar projection
     axs[1,2].remove()
     ax = fig.add_subplot(2, 3, 6, projection='polar')
+    #cmap1 = copy(plt.cm.hsv)
+    cmap1 = copy(cmocean.cm.phase)
     ax.grid(False)
     azm = np.deg2rad(phiArr)
     rad = np.rad2deg( np.arccos(muArr) )
     th, r = np.meshgrid(azm, rad)
-    ax.pcolormesh(th, r, AoLP)
-    ax.pcolormesh(-th, r, AoLP)
+    ax.pcolormesh(th, r, AoLP, cmap=cmap1)
+    pc = ax.pcolormesh(-th, r, -AoLP, cmap=cmap1)
+    #cbar = fig.colorbar(pc, pad=0.1)
+    #cbar.set_label('AoLP (degrees)')
     ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
     ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
     ax.grid()
 
+    # Draw the semi-circle to represent the AoLP colors
+    ax1 = fig.add_axes([0.91,0.04, 0.09,0.09], projection='polar')
+    ax1.grid(False)
+    ax1.axis('off')
+    ax1.pcolormesh(azimuthsR*np.pi/180.0, radii, valuesR, cmap=cmap1)
+
+    # Label AoLP angles on the semi-circle
+    for ii in np.arange(-90, 91, 45):
+        iirad = ii*np.pi/180
+        ax1.plot( (iirad, iirad), (rmax-0.03, rmax+0.00), color='k', ls='-')
+        ax1.plot( (iirad, iirad), (rmin-0.00, rmin+0.03), color='k', ls='-')
+        labl = str(ii) + "$^\circ$"
+        if np.absolute(ii)==90:
+            labl = "$\pm 90^\circ$"
+        ax1.text(iirad, 1.40, labl, style='italic', fontsize=9, rotation=ii, 
+                horizontalalignment='center', verticalalignment='center')
+    ax1.text(0,0, 'AoLP', fontsize=9, rotation=0, 
+            horizontalalignment='center', verticalalignment='center')
+ 
 
     fig.tight_layout(pad=1.0)
     plt.savefig(op, dpi=opdpi)

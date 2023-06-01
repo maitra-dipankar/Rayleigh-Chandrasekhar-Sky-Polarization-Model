@@ -11,7 +11,7 @@ my_tau = 0.1
 my_alb = 0.25
 
 # Input mu0 (my_mu0) has to be within 0.1 <= my_mu0 <= 1 
-my_mu0 = np.cos (np.deg2rad(65))
+my_mu0 = np.cos (np.deg2rad(75))
 #my_mu0 = 0.1
 
 # Regrid the mu and phi grids so that each have nNew grid points
