@@ -10,8 +10,9 @@ my_tau = 0.1
 # Input albedo (my_alb) has to be one of 0, 0.25, 0.8
 my_alb = 0.25
 
+'''
 # Input mu0 (my_mu0) has to be within 0.1 <= my_mu0 <= 1 
-my_mu0 = np.cos (np.deg2rad(75))
+my_mu0 = np.cos (np.deg2rad(10))
 #my_mu0 = 0.1
 
 # Regrid the mu and phi grids so that each have nNew grid points
@@ -43,4 +44,39 @@ my_filetype = "png"
 my_dpi = 150
 nt.make_detailed_plots(my_tau, my_alb, my_mu0, phiNew, muNew, I, Q, U,
                     DoLP, AoLP, my_filetype, my_dpi)
+'''
+
+for ii in range(84):
+    print(ii)
+    my_mu0 = np.cos(np.deg2rad(ii))
+    print('#############',ii, my_mu0,'###############')
+
+    # Regrid the mu and phi grids so that each have nNew grid points
+    nNew = 499
+    muNew = np.linspace( nt.mu[0],  nt.mu[-1], nNew)
+    phiNew = np.linspace( nt.phi[0],  nt.phi[-1], nNew)
+
+    # Generate the list of points where we'd like to get I/Q/U/DoLP etc.
+    pts_grid = np.meshgrid([my_mu0], muNew, phiNew, indexing='ij')
+    pts_list = np.reshape(pts_grid, (3, -1), order='C').T
+
+
+    # Get the list of I/Q/U values at the locations on the list
+    Ivals, Qvals, Uvals, DoLPvals, AoLPvals = nt.ReadTableLoadRefinedGrid (\
+            my_tau, my_alb, nNew, pts_list)
+
+    # Turn the I/Q/U/DoLP values into 2D arrays for visualizations
+    I = Ivals.reshape(nNew, nNew)
+    Q = Qvals.reshape(nNew, nNew)
+    U = Uvals.reshape(nNew, nNew)
+    DoLP = DoLPvals.reshape(nNew, nNew)
+    AoLP = AoLPvals.reshape(nNew, nNew)
+
+
+    # Visualize results
+    my_filetype = "png"
+    my_dpi = 150
+    nt.make_detailed_plots(my_tau, my_alb, my_mu0, phiNew, muNew, \
+            I, Q, U, DoLP, AoLP, my_filetype, my_dpi)
+
 

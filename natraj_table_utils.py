@@ -410,11 +410,11 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
 
     Returns
     -------
-    PDF file with visualizations.
+    Image file with visualizations.
     '''
     
     # Create the name of the output graphics file
-    op = 'tau_%.2f_A_%.2f_mu0_%.2f.%s' % (tau, albedo, mu0, opfiletype)
+    op = 'tau_%.2f_A_%.2f_mu0_%.5f.%s' % (tau, albedo, mu0, opfiletype)
     print('Output graphics file:',op)
 
     X, Y = np.meshgrid(phiArr, muArr)
@@ -435,7 +435,9 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
 
     fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(15, 9))
     fig.suptitle(r'Interpolations for $(\mu_0, \tau, A)=$ (%.2f, %.2f, %.2f).'\
-                 ' The red/white dots show the location of the Sun/neutral points.' % (mu0, tau, albedo) , fontsize=14)
+                 r' ZD$_{Sun}=$ %.1f$^{\rm o}$.' \
+                 ' The red/white dots show the location of the Sun/neutral points.' \
+                 % (mu0, tau, albedo, zdsun) , fontsize=14)
 
     ax = axs[0, 0]
     c = ax.pcolor(X, Y, I, cmap='plasma')
@@ -473,21 +475,31 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
     ax.axvline(zdsun, color ='r')
     
     #ax.set(xlim =(-10, zdsun+10), ylim=(-2, 10)) # Uncomment to zoom near Sun
-    ymin, ymax = ax.get_ylim()
-    tpos = ymax - 0.3*(ymax-ymin)
+    #ymin, ymax = ax.get_ylim()
+    #tpos = ymax - 0.7*(ymax-ymin)
+    tpos = 12
 
     for ii in range(3):
         if neutral_pts[ii] !=-999:
-            ax.axvline(neutral_pts[ii], color='k', linestyle='dotted')
+            xx = neutral_pts[ii]
+            #ax.axvline(xx, color='k', linestyle='dotted')
+            ax.plot([xx,xx], [0,10], color='k', linestyle='dotted')
+            
 
     if neutral_pts[0] !=-999:
-        ax.text(neutral_pts[0], tpos, 'Arago',    rotation=90,
+        dsun = np.abs(zdsun-neutral_pts[0])
+        txt = 'Arago: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[0], tpos, txt,    rotation=90,
                 rotation_mode='anchor')
     if neutral_pts[1] !=-999:
-        ax.text(neutral_pts[1], tpos, 'Babinet',  rotation=90, 
+        dsun = np.abs(zdsun-neutral_pts[1])
+        txt = 'Babinet: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[1], tpos, txt,  rotation=90, 
                 rotation_mode='anchor')
     if neutral_pts[2] !=-999:
-        ax.text(neutral_pts[2], tpos, 'Brewster', rotation=90,
+        dsun = np.abs(zdsun-neutral_pts[2])
+        txt = 'Brewster: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[2], tpos, txt, rotation=90,
                 rotation_mode='anchor')
     ax.grid()
 
@@ -528,9 +540,10 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
     # matplotlib axis at row=2, col=3, and instead add
     # a new axis there with polar projection
     axs[1,2].remove()
-    ax = fig.add_subplot(2, 3, 6, projection='polar')
-    #cmap1 = copy(plt.cm.hsv)
-    cmap1 = copy(cmocean.cm.phase)
+    #ax = fig.add_subplot(2, 3, 6, projection='polar')
+    ax = fig.add_axes([0.65,0.10, 0.35,0.35], projection='polar')
+    cmap1 = copy(plt.cm.hsv)
+    #cmap1 = copy(cmocean.cm.phase)
     ax.grid(False)
     azm = np.deg2rad(phiArr)
     rad = np.rad2deg( np.arccos(muArr) )
@@ -544,7 +557,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
     ax.grid()
 
     # Draw the semi-circle to represent the AoLP colors
-    ax1 = fig.add_axes([0.91,0.04, 0.09,0.09], projection='polar')
+    ax1 = fig.add_axes([0.90,0.08, 0.09,0.09], projection='polar')
     ax1.grid(False)
     ax1.axis('off')
     ax1.pcolormesh(azimuthsR*np.pi/180.0, radii, valuesR, cmap=cmap1)
@@ -563,7 +576,7 @@ def make_detailed_plots (tau, albedo, mu0, phiArr, muArr, I, Q, U,
             horizontalalignment='center', verticalalignment='center')
  
 
-    fig.tight_layout(pad=1.0)
+    fig.tight_layout(pad=1.5)
     plt.savefig(op, dpi=opdpi)
     plt.close()
     
