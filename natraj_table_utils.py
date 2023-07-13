@@ -672,3 +672,169 @@ def skymap_dolp (tau, albedo, az, el, phiArr, muArr, DoLP,
     return 0
 #######################################################################
 
+# Explore neutral points and lines
+def explore_neutral_points (tau, albedo, mu0, phiArr, muArr, I, Q, U, 
+        DoLP, AoLP, opfiletype, opdpi):
+    '''
+    Produces a detailed visualization exploring neutral points and
+    neutral lines
+    
+    Parameters
+    ----------
+    tau : optical depth of atmosphere
+        
+    albedo : ground albedo
+        
+    mu0 : cos(zenith-distance to light source)
+        
+    phiArr : viewing direction azimuth grid points
+        
+    muArr : viewing direction zenith-distance grid points
+        
+    I/Q/U/DoLP/AoLP: 2D arrays with I/Q/U/DoLP/AoLP values
+    
+    opfiletype : output file type (png/pdf/jpg)
+    
+    opdpi : DPI of output file
+
+    Returns
+    -------
+    Image file with visualizations.
+    '''
+    
+    # Create the name of the output graphics file
+    op = 'tau_%.2f_A_%.2f_mu0_%.5f.%s' % (tau, albedo, mu0, opfiletype)
+    print('Output graphics file:',op)
+
+    X, Y = np.meshgrid(phiArr, muArr)
+
+    Q_I = Q/I
+    U_I = U/I
+    U_Q = np.sign(U/Q)
+
+    zdsun = np.rad2deg( np.arccos(mu0) )
+    zdArr = np.rad2deg( np.arccos(muArr) )
+    meridian_solar = DoLP[:,0]
+    meridian_antisolar = DoLP[:,-1]
+    
+    # Get locations of neutral points
+    neutral_pts = locate_neutral_points (mu0, muArr, DoLP)
+    zd_nps = neutral_pts[neutral_pts > -999] # Select only detected NPs
+    az_nps_rad = np.where(zd_nps>0,0, np.pi) # Azimuths of detected NPs (rad)
+    az_nps_deg = np.where(zd_nps>0,0, 180)   # Azimuths of detected NPs (deg)
+    zd_nps = np.absolute(zd_nps)             # Zenith distances of NPs (deg)
+    mu_nps = np.cos(np.deg2rad(zd_nps))
+
+
+    fig, axs = plt.subplots(nrows=2, ncols=3, figsize=(15, 9))
+    fig.suptitle(r'Interpolations for $(\mu_0, \tau, A)=$ (%.2f, %.2f, %.2f).'\
+                 r' ZD$_{Sun}=$ %.1f$^{\rm o}$.' \
+                 ' The red/white dots show the location of the Sun/neutral points.' \
+                 % (mu0, tau, albedo, zdsun) , fontsize=14)
+
+    ax = axs[0, 0]
+    c = ax.pcolor(X, Y, I, cmap='plasma')
+    ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
+    ax.set_title('I')
+    ax.set_xlabel(r'$\phi$')
+    ax.set_ylabel(r'$\mu$')
+    fig.colorbar(c, ax=ax)
+
+    ax = axs[0, 1]
+    c = ax.pcolor(X, Y, Q_I, cmap='plasma')
+    ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
+    ax.set_title('Normalized Q, i.e. Q/I')
+    ax.set_xlabel(r'$\phi$')
+    ax.set_ylabel(r'$\mu$')
+    fig.colorbar(c, ax=ax)
+
+    ax = axs[0, 2]
+    c = ax.pcolor(X, Y, U_I, cmap='plasma')
+    ax.plot([0],[mu0], 'ro', markersize=10)
+    ax.plot(az_nps_deg, mu_nps, 'wo', markersize=5)
+    ax.set_title('Normalized U, i.e. U/I')
+    ax.set_xlabel(r'$\phi$')
+    ax.set_ylabel(r'$\mu$')
+    fig.colorbar(c, ax=ax)
+
+    ax = axs[1, 0]
+    ax.set_xlabel("Zenith distance in solar/antisolar direction in green/blue. \
+        \nSun's location shown by vertical red line.")
+    ax.set_ylabel('DoLP')
+    ax.plot(zdArr, meridian_solar, 'g-')
+    ax.plot(-zdArr, meridian_antisolar, 'b-')
+    ax.axvline(zdsun, color ='r')
+    
+    #ax.set(xlim =(-10, zdsun+10), ylim=(-2, 10)) # Uncomment to zoom near Sun
+    #ymin, ymax = ax.get_ylim()
+    #tpos = ymax - 0.7*(ymax-ymin)
+    tpos = 12
+
+    for ii in range(3):
+        if neutral_pts[ii] !=-999:
+            xx = neutral_pts[ii]
+            #ax.axvline(xx, color='k', linestyle='dotted')
+            ax.plot([xx,xx], [0,10], color='k', linestyle='dotted')
+            
+
+    if neutral_pts[0] !=-999:
+        dsun = np.abs(zdsun-neutral_pts[0])
+        txt = 'Arago: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[0], tpos, txt,    rotation=90,
+                rotation_mode='anchor')
+    if neutral_pts[1] !=-999:
+        dsun = np.abs(zdsun-neutral_pts[1])
+        txt = 'Babinet: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[1], tpos, txt,  rotation=90, 
+                rotation_mode='anchor')
+    if neutral_pts[2] !=-999:
+        dsun = np.abs(zdsun-neutral_pts[2])
+        txt = 'Brewster: ' + "{:.1f}".format(dsun) + ' deg from Sun'
+        ax.text(neutral_pts[2], tpos, txt, rotation=90,
+                rotation_mode='anchor')
+    ax.grid()
+
+    # This plot will show distribution of DoLPs on the
+    # sky, using a polar plot. So we first remove the linear
+    # matplotlib axis at row=2, col=2, and instead add
+    # a new axis there with polar projection
+    axs[1,1].remove()
+    ax = fig.add_subplot(2, 3, 5, projection='polar')
+    ax.grid(False)
+    azm = np.deg2rad(phiArr)
+    rad = np.rad2deg( np.arccos(muArr) )
+    th, r = np.meshgrid(azm, rad)
+    ax.pcolormesh(th, r, DoLP, vmin=0, vmax=100)
+    pc = ax.pcolormesh(-th, r, DoLP, vmin=0, vmax=100)
+    cbar = fig.colorbar(pc, pad=0.1)
+    cbar.set_label('DoLP (%)')
+    ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
+    ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
+    ax.grid()
+
+    # This plot will show the neutral lines, e.g. to compare
+    # with Fig. 3 of Chandrasekhar & Elbert (1951), using
+    # a polar plot. So we first remove the linear
+    # matplotlib axis at row=2, col=3, and instead add
+    # a new axis there with polar projection
+    axs[1,2].remove()
+    ax = fig.add_subplot(2, 3, 6, projection='polar')
+    ax.grid(False)
+    azm = np.deg2rad(phiArr)
+    rad = np.rad2deg( np.arccos(muArr) )
+    th, r = np.meshgrid(azm, rad)
+    ax.pcolormesh(th, r, U_Q)
+    pc = ax.pcolormesh(-th, r, U_Q)
+    cbar = fig.colorbar(pc, pad=0.1, ticks=[-1, 0, 1])
+    cbar.set_label('Neutral lines (sign of U/Q)')
+    ax.plot([0],[zdsun], 'ro', markersize=10)       # Plot Sun
+    ax.plot(az_nps_rad, zd_nps, 'wo', markersize=5) # Plot neutral points
+    ax.grid()
+
+    fig.tight_layout(pad=1.5)
+    plt.savefig(op, dpi=opdpi)
+    plt.close()
+    
+    return 0
